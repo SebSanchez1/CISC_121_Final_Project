@@ -42,37 +42,46 @@ def sort(a):
     
 def convert_input():
     pass
-    
-def random_numbers(amount = 50):
-    numbers = []
 
-    for i in range(amount):
-        if random.randint(0,1) == 0:
-            numbers.append(random.randint(0,9))
-        else:
-            numbers.append(random.randint(10, 99))
 
-    return numbers
+def random_characters(amount, type):
+    characters = []
 
-def random_letters(amount = 50):
-    letters = []
+    if type == "Numbers":
+        for i in range(amount):
+            if random.randint(0,1) == 0:
+                characters.append(random.randint(0,9))
+            else:
+                characters.append(random.randint(10, 99))
 
-    for i in range(amount):
-        letters.append(valid_characters[(random.randint(0,51)) + 10])
+    elif type == "Letters":
+        for i in range(amount):
+            characters.append(valid_characters[(random.randint(0,51)) + 10])
 
-    return letters
+    else:
+        for i in range(amount):
+            if random.randint(0,1) == 0:
+                if random.randint(0,1) == 0:
+                    characters.append(random.randint(0,9))
+                else:
+                    characters.append(random.randint(10, 99))
+            else:
+                characters.append(valid_characters[(random.randint(0,51)) + 10])
 
-def random_mixed():
-    pass
-
+    return characters
 
 
 with gr.Blocks() as demo:
-    numbers = gr.Textbox(label="Numbers")
-    sorted_list = gr.Textbox(label="Sorted List")
-    random_btn = gr.Button("Generate Random Numbers")
-    random_btn.click(fn = random_numbers, outputs = numbers, api_name="Generate Random Numbers")
+    numbers = gr.Textbox(label = "Numbers")
+    sorted_list = gr.Textbox(label = "Sorted List")
+
+    random_amount = gr.Slider(1, 50, label = "Amount of Random Numbers")
+    chracter_type = gr.Radio(choices = ["Numbers", "Letters", "Both"], label = "Type of Characters", value = "Numbers")
+
+    random_btn = gr.Button("Generate Random Chracters")
+    random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = numbers, api_name = "Generate Random Characters")
+
     sort_btn = gr.Button("Sort")
-    sort_btn.click(fn = sort, inputs = numbers, outputs = sorted_list, api_name="Merge Sort")
+    sort_btn.click(fn = sort, inputs = numbers, outputs = sorted_list, api_name = "Sort")
 
 demo.launch()
