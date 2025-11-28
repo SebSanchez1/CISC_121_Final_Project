@@ -45,6 +45,7 @@ def convert_input():
 
 
 def random_characters(amount, type):
+    amount = int(amount)
     characters = []
 
     if type == "Numbers":
@@ -68,20 +69,20 @@ def random_characters(amount, type):
             else:
                 characters.append(valid_characters[(random.randint(0,51)) + 10])
 
-    return characters
+    return " ".join(map(str, characters))
 
 
 with gr.Blocks() as demo:
-    numbers = gr.Textbox(label = "Numbers")
+    with gr.Sidebar():
+        numbers = gr.Textbox(label = "Numbers")
+        random_amount = gr.Slider(1, 50, step=1, label = "Amount of Random Characters")
+        chracter_type = gr.Radio(choices = ["Numbers", "Letters", "Both"], label = "Type of Characters", value = "Numbers")
+        random_btn = gr.Button("Generate Random Chracters")
+
     sorted_list = gr.Textbox(label = "Sorted List")
-
-    random_amount = gr.Slider(1, 50, label = "Amount of Random Numbers")
-    chracter_type = gr.Radio(choices = ["Numbers", "Letters", "Both"], label = "Type of Characters", value = "Numbers")
-
-    random_btn = gr.Button("Generate Random Chracters")
-    random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = numbers, api_name = "Generate Random Characters")
-
     sort_btn = gr.Button("Sort")
+
+    random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = numbers, api_name = "Generate Random Characters")
     sort_btn.click(fn = sort, inputs = numbers, outputs = sorted_list, api_name = "Sort")
 
 demo.launch()
