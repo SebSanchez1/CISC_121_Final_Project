@@ -72,6 +72,38 @@ def random_characters(amount, type):
     return " ".join(map(str, characters))
 
 
+def handle_sort(input_str):
+    if not input_str:
+        return ""
+    
+    items = input_str.split()
+    
+    # Check if all items are numbers
+    all_numbers = True
+    passed_items = []
+    for item in items:
+        if item.isdigit():
+            passed_items.append(int(item))
+        else:
+            all_numbers = False
+            passed_items.append(item)
+            
+    if all_numbers:
+        # Sort numbers
+        sorted_items = sort(passed_items)
+        # Generate HTML blocks
+        html = '<div style="display: flex; align-items: flex-end; gap: 2px; height: 300px; overflow-x: auto;">'
+        for num in sorted_items:
+            height = num * 3  # Scale factor
+            html += f'<div style="width: 15px; height: {height}px; background-color: #4CAF50;" title="{num}"></div>'
+        html += '</div>'
+        return html
+    else:
+        # Sort mixed/strings (convert all to strings to avoid type errors)
+        string_items = [str(x) for x in passed_items]
+        sorted_items = sort(string_items)
+        return " ".join(sorted_items)
+
 with gr.Blocks() as demo:
     with gr.Sidebar():
         numbers = gr.Textbox(label = "Numbers")
@@ -79,10 +111,10 @@ with gr.Blocks() as demo:
         chracter_type = gr.Radio(choices = ["Numbers", "Letters", "Both"], label = "Type of Characters", value = "Numbers")
         random_btn = gr.Button("Generate Random Chracters")
 
-    sorted_list = gr.Textbox(label = "Sorted List")
+    sorted_list = gr.HTML(label = "Sorted List")
     sort_btn = gr.Button("Sort")
 
     random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = numbers, api_name = "Generate Random Characters")
-    sort_btn.click(fn = sort, inputs = numbers, outputs = sorted_list, api_name = "Sort")
+    sort_btn.click(fn = handle_sort, inputs = numbers, outputs = sorted_list, api_name = "Sort")
 
 demo.launch()
