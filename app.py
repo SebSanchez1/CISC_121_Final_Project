@@ -72,7 +72,7 @@ def random_characters(amount, type):
     return " ".join(map(str, characters))
 
 
-def handle_sort(input_str):
+def handle_sort(input_str, show_bars=True):
     if not input_str:
         return ""
     
@@ -88,33 +88,100 @@ def handle_sort(input_str):
             all_numbers = False
             passed_items.append(item)
             
-    if all_numbers:
-        # Sort numbers
+    if all_numbers and show_bars:
+        # Sort numbers and display as bars
         sorted_items = sort(passed_items)
         # Generate HTML blocks
-        html = '<div style="display: flex; align-items: flex-end; gap: 2px; height: 300px; overflow-x: auto;">'
+        html = '<div style="display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 300px; overflow-x: auto;">'
         for num in sorted_items:
             height = num * 3  # Scale factor
             html += f'<div style="width: 15px; height: {height}px; background-color: #4CAF50;" title="{num}"></div>'
         html += '</div>'
         return html
     else:
-        # Sort mixed/strings (convert all to strings to avoid type errors)
-        string_items = [str(x) for x in passed_items]
-        sorted_items = sort(string_items)
-        return " ".join(sorted_items)
+        # Sort as text (for letters, mixed, or when bars is unchecked)
+        if all_numbers:
+            sorted_items = sort(passed_items)
+        else:
+            string_items = [str(x) for x in passed_items]
+            sorted_items = sort(string_items)
+        
+        # Display as squares in a single row
+        html = '<div style="display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; padding: 10px;">'
+        for item in sorted_items:
+            html += f'<div style="min-width: 50px; height: 50px; background-color: #2196F3; color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold; font-size: 16px;">{item}</div>'
+        html += '</div>'
+        return html
+
+def update_button_text(choice):
+    if choice == "Numbers":
+        return gr.Button("Generate Random Numbers")
+    elif choice == "Letters":
+        return gr.Button("Generate Random Letters")
+    else:
+        return gr.Button("Generate Random Characters")
+
+import re
+
+def sanitize_input(text):
+    if not text:
+        return ""
+    
+    # Allow only alphanumeric and space
+    text = re.sub(r'[^a-zA-Z0-9 ]', '', text)
+    
+    # No double spaces
+    text = re.sub(r'\s+', ' ', text)
+    
+    tokens = text.split(' ')
+    
+    # Limit to 20 items
+    if len(tokens) > 20:
+        tokens = tokens[:20]
+    
+    processed_tokens = []
+    
+    for token in tokens:
+        if not token:
+            processed_tokens.append("")
+            continue
+            
+        if token[0].isdigit():
+            # It's a number, keep only digits, max 2 chars
+            num_str = "".join(filter(str.isdigit, token))
+            processed_tokens.append(num_str[:2])
+        elif token[0].isalpha():
+            # It's a letter, keep only letters, max 1 char
+            let_str = "".join(filter(str.isalpha, token))
+            processed_tokens.append(let_str[:1])
+        else:
+            # Should not happen due to regex above, but safe fallback
+            processed_tokens.append(token)
+            
+    return " ".join(processed_tokens)
+
+def toggle_bars_visibility(choice):
+    if choice == "Numbers":
+        return gr.Checkbox(visible=True)
+    else:
+        return gr.Checkbox(visible=False)
 
 with gr.Blocks() as demo:
     with gr.Sidebar():
-        numbers = gr.Textbox(label = "Numbers")
-        random_amount = gr.Slider(1, 50, step=1, label = "Amount of Random Characters")
+        characters = gr.Textbox(label = "Characters", lines=4)
+        random_amount = gr.Slider(1, 20, step=1, label = "Amount of Random Characters")
         chracter_type = gr.Radio(choices = ["Numbers", "Letters", "Both"], label = "Type of Characters", value = "Numbers")
-        random_btn = gr.Button("Generate Random Chracters")
+        bars_checkbox = gr.Checkbox(label="Bars", value=True, visible=True)
+        random_btn = gr.Button("Generate Random Characters")
 
     sorted_list = gr.HTML(label = "Sorted List")
     sort_btn = gr.Button("Sort")
 
-    random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = numbers, api_name = "Generate Random Characters")
-    sort_btn.click(fn = handle_sort, inputs = numbers, outputs = sorted_list, api_name = "Sort")
+    random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = characters, api_name = "Generate Random Characters")
+    sort_btn.click(fn = handle_sort, inputs = [characters, bars_checkbox], outputs = sorted_list, api_name = "Sort")
+
+    chracter_type.change(fn = update_button_text, inputs = chracter_type, outputs = random_btn)
+    chracter_type.change(fn = toggle_bars_visibility, inputs = chracter_type, outputs = bars_checkbox)
+    characters.change(fn = sanitize_input, inputs = characters, outputs = characters)
 
 demo.launch()
