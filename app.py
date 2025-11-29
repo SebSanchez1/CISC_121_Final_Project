@@ -1,21 +1,18 @@
 import gradio as gr
 import random
-import re
 import time
+import re
 
-valid_characters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 
-                    "a", "b", "c", "d", "e", "f", 
-                    "g", "h", "i", "j", "k", "l", 
-                    "m", "n", "o", "p", "q", "r", 
-                    "s", "t", "u", "v", "w", "x", 
-                    "y", "z", "A", "B", "C", "D", 
-                    "E", "F", "G", "H", "I", "J", 
-                    "K", "L", "M", "N", "O", "P", 
-                    "Q", "R", "S", "T", "U", "V", 
-                    "W", "X", "Y", "Z"]
+valid_characters = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 
+    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+]
 
 class SortVisualizer:
-    def __init__(self, items, speed=5):
+    def __init__(self, items, speed=5, stop_signal=None):
         # Wrap items to track them: {'val': value, 'id': unique_id}
         self.items = [{'val': x, 'id': i} for i, x in enumerate(items)]
         # Track visual state: {id: {'depth': d, 'color': c, 'shade_mod': 0}}
@@ -24,6 +21,10 @@ class SortVisualizer:
         # Speed 1 (slow) to 10 (fast). 
         # Base delay: 2.0s / speed
         self.delay = 2.0 / max(1, speed)
+        self.stop_signal = stop_signal if stop_signal is not None else [False]
+
+    def check_stop(self):
+        return self.stop_signal[0]
 
     def get_color(self, depth, shade_mod=0):
         # Rainbow palette based on depth
@@ -62,7 +63,8 @@ class SortVisualizer:
 
     def render(self):
         # Increased height to 600px
-        html = '<div style="position:relative; height:600px; width:100%; background-color:#f0f0f0; border-radius:8px; overflow:hidden;">'
+        # Added class for styling hook, though inline styles dominate
+        html = '<div class="animation-window" style="position:relative; height:600px; width:100%; background-color:#1a1a2e; border-radius:8px; overflow:hidden;">'
         
         n = len(self.items)
         if n == 0: return html + "</div>"
@@ -117,7 +119,8 @@ class SortVisualizer:
                     color: white;
                     font-weight: bold;
                     font-size: 12px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+                    border: 1px solid rgba(255,255,255,0.1);
                 ">
                     {val}
                 </div>
@@ -138,6 +141,7 @@ class SortVisualizer:
                 del self.state[item_id]['force_color']
             
     def merge_sort(self, start, end, depth):
+        if self.check_stop(): return
         if end - start < 2:
             return
 
@@ -146,14 +150,20 @@ class SortVisualizer:
         # Recurse Left (Lighter)
         self.update_depths(range(start, mid), depth + 1, shade_delta=1)
         yield self.render()
+        if self.check_stop(): return
         time.sleep(self.delay)
+        
         yield from self.merge_sort(start, mid, depth + 1)
+        if self.check_stop(): return
         
         # Recurse Right (Darker)
         self.update_depths(range(mid, end), depth + 1, shade_delta=-1)
         yield self.render()
+        if self.check_stop(): return
         time.sleep(self.delay)
+        
         yield from self.merge_sort(mid, end, depth + 1)
+        if self.check_stop(): return
 
         # Merge Logic
         left = self.items[start:mid]
@@ -163,6 +173,7 @@ class SortVisualizer:
         i, j = 0, 0
         
         while i < len(left) and j < len(right):
+            if self.check_stop(): return
             # Compare
             val_l = left[i]['val']
             val_r = right[j]['val']
@@ -193,6 +204,7 @@ class SortVisualizer:
 
         # Append remaining
         while i < len(left):
+            if self.check_stop(): return
             picked = left[i]
             self.state[picked['id']]['depth'] = depth + 2
             self.state[picked['id']]['force_color'] = 'black'
@@ -203,6 +215,7 @@ class SortVisualizer:
             time.sleep(self.delay)
 
         while j < len(right):
+            if self.check_stop(): return
             picked = right[j]
             self.state[picked['id']]['depth'] = depth + 2
             self.state[picked['id']]['force_color'] = 'black'
@@ -226,9 +239,12 @@ class SortVisualizer:
         time.sleep(self.delay)
 
 
-def animate_sort(input_str, speed):
+def animate_sort(input_str, speed, stop_signal):
     if not input_str:
         return ""
+    
+    # Reset stop signal
+    stop_signal[0] = False
     
     items = input_str.split()
     
@@ -240,19 +256,24 @@ def animate_sort(input_str, speed):
         else:
             parsed_items.append(item)
 
-    viz = SortVisualizer(parsed_items, speed)
+    viz = SortVisualizer(parsed_items, speed, stop_signal)
     
     # Initial State
     yield viz.render()
+    if viz.check_stop(): return
     time.sleep(1.0)
     
     # Start Sort
     yield from viz.merge_sort(0, len(parsed_items), 0)
     
     # Final 'Done' state
-    yield viz.render()
+    if not viz.check_stop():
+        yield viz.render()
 
-def reset_sort(input_str):
+def reset_sort(input_str, stop_signal):
+    # Signal to stop the animation
+    stop_signal[0] = True
+    
     # Yield the initial state to match generator expectation
     if not input_str:
         yield ""
@@ -368,23 +389,28 @@ def sanitize_input(text):
 
 
 with gr.Blocks() as merge_sort_visualizer:
+    # State to manage stop signal [False]
+    stop_signal = gr.State([False])
+    
     with gr.Sidebar():
         characters = gr.Textbox(label = "Characters", lines=4)
         random_amount = gr.Slider(1, 20, step=1, label = "Amount of Random Characters")
         chracter_type = gr.Radio(choices = ["Numbers", "Letters", "Both"], label = "Type of Characters", value = "Numbers")
-        random_btn = gr.Button("Generate Random Characters")
+        random_btn = gr.Button("Generate Random Characters", variant="primary")
         
         speed_slider = gr.Slider(1, 10, value=5, step=1, label="Animation Speed (1=Slow, 10=Fast)")
 
     sorted_list = gr.HTML(label = "Sorted List")
-    sort_btn = gr.Button("Sort")
-    reset_btn = gr.Button("Reset / Stop")
+    sort_btn = gr.Button("Sort", variant="primary")
+    reset_btn = gr.Button("Reset / Stop", variant="secondary")
 
     random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = characters, api_name = "Generate Random Characters")
     
-    sort_event = sort_btn.click(fn = animate_sort, inputs = [characters, speed_slider], outputs = sorted_list)
+    # Pass stop_signal to animate_sort
+    sort_event = sort_btn.click(fn = animate_sort, inputs = [characters, speed_slider, stop_signal], outputs = sorted_list)
     
-    reset_btn.click(fn = reset_sort, inputs = characters, outputs = sorted_list, cancels=[sort_event])
+    # Pass stop_signal to reset_sort. REMOVED cancels=[sort_event] to avoid error.
+    reset_btn.click(fn = reset_sort, inputs = [characters, stop_signal], outputs = sorted_list)
 
     chracter_type.change(fn = update_button_text, inputs = chracter_type, outputs = random_btn)
     
