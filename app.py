@@ -106,10 +106,14 @@ def handle_sort(input_str, show_bars=True):
             string_items = [str(x) for x in passed_items]
             sorted_items = sort(string_items)
         
-        # Display as squares in a single row
-        html = '<div style="display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; padding: 10px;">'
+        # Display as squares that fit in one view without scrolling
+        num_items = len(sorted_items)
+        # Calculate size based on number of items (max 20 items, so we can fit them nicely)
+        # Use CSS to make them responsive
+        html = '<div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; justify-content: center;">'
         for item in sorted_items:
-            html += f'<div style="min-width: 50px; height: 50px; background-color: #2196F3; color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold; font-size: 16px;">{item}</div>'
+            # Use flex-basis with calc to make squares responsive
+            html += f'<div style="flex: 0 0 calc((100% - {(num_items-1)*8}px) / {min(num_items, 10)}); min-width: 40px; max-width: 80px; aspect-ratio: 1; background-color: #2196F3; color: white; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold; font-size: 16px;">{item}</div>'
         html += '</div>'
         return html
 
