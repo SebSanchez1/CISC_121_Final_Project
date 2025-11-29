@@ -1,5 +1,7 @@
 import gradio as gr
 import random
+import re
+import time
 
 valid_characters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 
                     "a", "b", "c", "d", "e", "f", 
@@ -12,50 +14,292 @@ valid_characters = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
                     "Q", "R", "S", "T", "U", "V", 
                     "W", "X", "Y", "Z"]
 
-def merge(list_1, list_2):
-    list_m = []
-    i = 0
-    j = 0
-    while i < len(list_1) and j < len(list_2):
-        if list_1[i] <= list_2[j]:
-            list_m.append(list_1[i])
+class SortVisualizer:
+    def __init__(self, items, speed=5):
+        # Wrap items to track them: {'val': value, 'id': unique_id}
+        self.items = [{'val': x, 'id': i} for i, x in enumerate(items)]
+        # Track visual state: {id: {'depth': d, 'color': c, 'shade_mod': 0}}
+        self.state = {item['id']: {'depth': 0, 'color': 'black', 'shade_mod': 0} for item in self.items}
+        self.history = []
+        # Speed 1 (slow) to 10 (fast). 
+        # Base delay: 2.0s / speed
+        self.delay = 2.0 / max(1, speed)
+
+    def get_color(self, depth, shade_mod=0):
+        # Rainbow palette based on depth
+        colors = [
+            (0, 0, 0),       # Black (Initial)
+            (255, 0, 0),     # Red
+            (255, 127, 0),   # Orange
+            (204, 204, 0),   # Darker Yellow
+            (0, 128, 0),     # Green
+            (0, 0, 255),     # Blue
+            (75, 0, 130),    # Indigo
+            (148, 0, 211)    # Violet
+        ]
+        
+        base_rgb = colors[min(depth, len(colors) - 1)]
+        
+        # Apply shade modification (lighter or darker)
+        r, g, b = base_rgb
+        
+        if shade_mod > 0:
+            # Lighter: blend with white
+            # Increased contrast factor
+            factor = min(0.7, shade_mod * 0.25) 
+            r = int(r + (255 - r) * factor)
+            g = int(g + (255 - g) * factor)
+            b = int(b + (255 - b) * factor)
+        elif shade_mod < 0:
+            # Darker: blend with black
+            # Increased contrast factor
+            factor = min(0.7, abs(shade_mod) * 0.25)
+            r = int(r * (1 - factor))
+            g = int(g * (1 - factor))
+            b = int(b * (1 - factor))
+            
+        return f"rgb({r}, {g}, {b})"
+
+    def render(self):
+        # Increased height to 600px
+        html = '<div style="position:relative; height:600px; width:100%; background-color:#f0f0f0; border-radius:8px; overflow:hidden;">'
+        
+        n = len(self.items)
+        if n == 0: return html + "</div>"
+        
+        # Responsive Layout using Percentages
+        item_width_pct = 100.0 / n
+        
+        for idx, item in enumerate(self.items):
+            props = self.state[item['id']]
+            depth = props['depth']
+            shade_mod = props.get('shade_mod', 0)
+            
+            if props.get('force_color'):
+                color = props['force_color']
+            else:
+                color = self.get_color(depth, shade_mod)
+                
+            val = item['val']
+            
+            # Height based on value
+            if isinstance(val, int):
+                height = max(20, val * 3)
+            elif str(val).isdigit():
+                height = max(20, int(val) * 3)
+            else:
+                height = 60
+                
+            left_pct = idx * item_width_pct
+            top = 20 + depth * 60
+            
+            html += f'''
+            <div style="
+                position: absolute;
+                left: {left_pct}%;
+                top: {top}px;
+                width: {item_width_pct}%;
+                height: {height}px;
+                padding: 0 2px; /* Horizontal spacing */
+                box-sizing: border-box;
+                display: flex;
+                justify-content: center;
+                transition: all {self.delay}s ease;
+            ">
+                <div style="
+                    width: 100%;
+                    height: 100%;
+                    background: {color};
+                    border-radius: 4px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 12px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                ">
+                    {val}
+                </div>
+            </div>
+            '''
+        html += "</div>"
+        return html
+
+    def update_depths(self, indices, depth, shade_delta=0):
+        for idx in indices:
+            item_id = self.items[idx]['id']
+            self.state[item_id]['depth'] = depth
+            
+            if shade_delta != 0:
+                self.state[item_id]['shade_mod'] = self.state[item_id].get('shade_mod', 0) + shade_delta
+            
+            if 'force_color' in self.state[item_id]:
+                del self.state[item_id]['force_color']
+            
+    def merge_sort(self, start, end, depth):
+        if end - start < 2:
+            return
+
+        mid = (start + end) // 2
+        
+        # Recurse Left (Lighter)
+        self.update_depths(range(start, mid), depth + 1, shade_delta=1)
+        yield self.render()
+        time.sleep(self.delay)
+        yield from self.merge_sort(start, mid, depth + 1)
+        
+        # Recurse Right (Darker)
+        self.update_depths(range(mid, end), depth + 1, shade_delta=-1)
+        yield self.render()
+        time.sleep(self.delay)
+        yield from self.merge_sort(mid, end, depth + 1)
+
+        # Merge Logic
+        left = self.items[start:mid]
+        right = self.items[mid:end]
+        
+        merged = []
+        i, j = 0, 0
+        
+        while i < len(left) and j < len(right):
+            # Compare
+            val_l = left[i]['val']
+            val_r = right[j]['val']
+            
+            if str(val_l).isdigit() and str(val_r).isdigit():
+                cond = int(val_l) <= int(val_r)
+            else:
+                cond = str(val_l) <= str(val_r)
+
+            if cond:
+                picked = left[i]
+                i += 1
+            else:
+                picked = right[j]
+                j += 1
+            
+            # Move picked item to depth + 2 (merge zone)
+            self.state[picked['id']]['depth'] = depth + 2
+            self.state[picked['id']]['force_color'] = 'black'
+            
+            merged.append(picked)
+            
+            current_window = merged + left[i:] + right[j:]
+            self.items[start:end] = current_window
+            
+            yield self.render()
+            time.sleep(self.delay) 
+
+        # Append remaining
+        while i < len(left):
+            picked = left[i]
+            self.state[picked['id']]['depth'] = depth + 2
+            self.state[picked['id']]['force_color'] = 'black'
+            merged.append(picked)
             i += 1
-        else:
-            list_m.append(list_2[j])
+            self.items[start:end] = merged + left[i:] + right[j:]
+            yield self.render()
+            time.sleep(self.delay)
+
+        while j < len(right):
+            picked = right[j]
+            self.state[picked['id']]['depth'] = depth + 2
+            self.state[picked['id']]['force_color'] = 'black'
+            merged.append(picked)
             j += 1
-    while i < len(list_1):
-        list_m.append(list_1[i])
-        i += 1
-    while j < len(list_2):
-        list_m.append(list_2[j])
-        j += 1
-    return list_m
+            self.items[start:end] = merged + left[i:] + right[j:]
+            yield self.render()
+            time.sleep(self.delay)
 
-def sort(a):
-    n = len(a)
-    if n < 2:
-        return a
-    else:
-        left = a[:n//2]
-        right = a[n//2:]
-        return merge(sort(left), sort(right))
+        # Merge complete. Move back up to 'depth'
+        time.sleep(self.delay * 0.5)
+        
+        # Reset shade modifiers
+        for item in left:
+             self.state[item['id']]['shade_mod'] -= 1
+        for item in right:
+             self.state[item['id']]['shade_mod'] += 1
+             
+        self.update_depths(range(start, end), depth, shade_delta=0)
+        yield self.render()
+        time.sleep(self.delay)
+
+
+def animate_sort(input_str, speed):
+    if not input_str:
+        return ""
     
-def convert_input():
-    pass
+    items = input_str.split()
+    
+    # Convert to ints when possible for proper comparison
+    parsed_items = []
+    for item in items:
+        if item.isdigit():
+            parsed_items.append(int(item))
+        else:
+            parsed_items.append(item)
 
+    viz = SortVisualizer(parsed_items, speed)
+    
+    # Initial State
+    yield viz.render()
+    time.sleep(1.0)
+    
+    # Start Sort
+    yield from viz.merge_sort(0, len(parsed_items), 0)
+    
+    # Final 'Done' state
+    yield viz.render()
 
-def random_characters(amount, type):
+def reset_sort(input_str):
+    # Yield the initial state to match generator expectation
+    if not input_str:
+        yield ""
+        return
+    
+    items = input_str.split()
+    parsed_items = []
+    for item in items:
+        if item.isdigit():
+            parsed_items.append(int(item))
+        else:
+            parsed_items.append(item)
+            
+    viz = SortVisualizer(parsed_items)
+    yield viz.render()
+
+def update_display_and_sanitize(text):
+    # Sanitize first
+    sanitized = sanitize_input(text)
+    
+    # Render initial state
+    if not sanitized:
+        return sanitized, ""
+        
+    items = sanitized.split()
+    parsed_items = []
+    for item in items:
+        if item.isdigit():
+            parsed_items.append(int(item))
+        else:
+            parsed_items.append(item)
+            
+    viz = SortVisualizer(parsed_items)
+    return sanitized, viz.render()
+
+def random_characters(amount, type_choice):
     amount = int(amount)
     characters = []
 
-    if type == "Numbers":
+    if type_choice == "Numbers":
         for i in range(amount):
             if random.randint(0,1) == 0:
                 characters.append(random.randint(0,9))
             else:
                 characters.append(random.randint(10, 99))
 
-    elif type == "Letters":
+    elif type_choice == "Letters":
         for i in range(amount):
             characters.append(valid_characters[(random.randint(0,51)) + 10])
 
@@ -72,49 +316,6 @@ def random_characters(amount, type):
     return " ".join(map(str, characters))
 
 
-def handle_sort(input_str, show_bars=True):
-    if not input_str:
-        return ""
-    
-    items = input_str.split()
-    
-    # Check if all items are numbers
-    all_numbers = True
-    passed_items = []
-    for item in items:
-        if item.isdigit():
-            passed_items.append(int(item))
-        else:
-            all_numbers = False
-            passed_items.append(item)
-            
-    if all_numbers and show_bars:
-        # Sort numbers and display as bars
-        sorted_items = sort(passed_items)
-        # Generate HTML blocks
-        html = '<div style="display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 300px; overflow-x: auto;">'
-        for num in sorted_items:
-            height = num * 3  # Scale factor
-            html += f'<div style="width: 15px; height: {height}px; background-color: #4CAF50;" title="{num}"></div>'
-        html += '</div>'
-        return html
-    else:
-        # Sort as text (for letters, mixed, or when bars is unchecked)
-        if all_numbers:
-            sorted_items = sort(passed_items)
-        else:
-            string_items = [str(x) for x in passed_items]
-            sorted_items = sort(string_items)
-        
-        # Display as squares in a single row
-        html = '''<div style="display: flex; flex-direction: row; gap: 8px; padding: 10px; overflow-x: auto; white-space: nowrap;">'''
-        for item in sorted_items:
-            html += f'''
-            <div style="width: min(80px, calc(100vw / {len(sorted_items)} - 8px)); height: min(80px, calc(100vw / {len(sorted_items)} - 8px)); background-color: #2196F3; color: white; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold; font-size: 16px; ">{item}</div>'''
-        html += "</div>"
-
-        return html
-
 def update_button_text(choice):
     if choice == "Numbers":
         return gr.Button("Generate Random Numbers")
@@ -123,7 +324,6 @@ def update_button_text(choice):
     else:
         return gr.Button("Generate Random Characters")
 
-import re
 
 def sanitize_input(text):
     if not text:
@@ -137,53 +337,58 @@ def sanitize_input(text):
     
     tokens = text.split(' ')
     
-    # Limit to 20 items
+    # Enforce strict 20 item limit
     if len(tokens) > 20:
         tokens = tokens[:20]
+        # If we truncated, we definitely shouldn't allow a trailing space
+        # to start a 21st item.
+        return " ".join(tokens)
     
     processed_tokens = []
-    
     for token in tokens:
         if not token:
-            processed_tokens.append("")
             continue
-            
         if token[0].isdigit():
-            # It's a number, keep only digits, max 2 chars
             num_str = "".join(filter(str.isdigit, token))
             processed_tokens.append(num_str[:2])
         elif token[0].isalpha():
-            # It's a letter, keep only letters, max 1 char
             let_str = "".join(filter(str.isalpha, token))
             processed_tokens.append(let_str[:1])
         else:
-            # Should not happen due to regex above, but safe fallback
             processed_tokens.append(token)
             
-    return " ".join(processed_tokens)
+    result = " ".join(processed_tokens)
+    
+    # Preserve trailing space ONLY if we are under the limit
+    # and the user actually typed a space at the end
+    if len(processed_tokens) < 20 and text.endswith(' '):
+        result += " "
+        
+    return result
 
-def toggle_bars_visibility(choice):
-    if choice == "Numbers":
-        return gr.Checkbox(visible=True)
-    else:
-        return gr.Checkbox(visible=False)
 
-with gr.Blocks() as demo:
+with gr.Blocks() as merge_sort_visualizer:
     with gr.Sidebar():
         characters = gr.Textbox(label = "Characters", lines=4)
         random_amount = gr.Slider(1, 20, step=1, label = "Amount of Random Characters")
         chracter_type = gr.Radio(choices = ["Numbers", "Letters", "Both"], label = "Type of Characters", value = "Numbers")
-        bars_checkbox = gr.Checkbox(label="Bars", value=True, visible=True)
         random_btn = gr.Button("Generate Random Characters")
+        
+        speed_slider = gr.Slider(1, 10, value=5, step=1, label="Animation Speed (1=Slow, 10=Fast)")
 
     sorted_list = gr.HTML(label = "Sorted List")
     sort_btn = gr.Button("Sort")
+    reset_btn = gr.Button("Reset / Stop")
 
     random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = characters, api_name = "Generate Random Characters")
-    sort_btn.click(fn = handle_sort, inputs = [characters, bars_checkbox], outputs = sorted_list, api_name = "Sort")
+    
+    sort_event = sort_btn.click(fn = animate_sort, inputs = [characters, speed_slider], outputs = sorted_list)
+    
+    reset_btn.click(fn = reset_sort, inputs = characters, outputs = sorted_list, cancels=[sort_event])
 
     chracter_type.change(fn = update_button_text, inputs = chracter_type, outputs = random_btn)
-    chracter_type.change(fn = toggle_bars_visibility, inputs = chracter_type, outputs = bars_checkbox)
-    characters.change(fn = sanitize_input, inputs = characters, outputs = characters)
+    
+    # Real-time updates: update display AND sanitize
+    characters.change(fn = update_display_and_sanitize, inputs = characters, outputs = [characters, sorted_list])
 
-demo.launch()
+merge_sort_visualizer.launch()
