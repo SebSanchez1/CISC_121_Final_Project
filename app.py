@@ -3,6 +3,7 @@ import random
 import time
 import re
 
+# Possible characters to sort
 valid_characters = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
@@ -11,22 +12,57 @@ valid_characters = [
     'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
 ]
 
-class SortVisualizer:
+class SortVisualizer: # [Used ChatGPT for most of animation: Used prompt "create animation for merge sort"]
+    """
+    Handles elements for the merge sort visualization
+
+    Tracks multiple states for each item in the list thats being sorting. 
+    Track things like depth, color and order. 
+    Also controls HTML styling for objects, speed of animation, and stop button.
+    
+    Attributes:
+        items (list): List of items to sort.
+        state (dict): Visual state for each item.
+        delay (float): Delay between animation frames.
+        stop_signal (list): Shared stop signal to halt animation.
+    """
+    
+    
     def __init__(self, items, speed=5, stop_signal=None):
+        """
+        Parameters:
+            items (list): List of items to sort.
+            speed (int): Speed of animation (1-10).
+            stop_signal (list): Shared stop signal to halt animation.
+        """
+
         # Wrap items to track them: {'val': value, 'id': unique_id}
         self.items = [{'val': x, 'id': i} for i, x in enumerate(items)]
         # Track visual state: {id: {'depth': d, 'color': c, 'shade_mod': 0}}
         self.state = {item['id']: {'depth': 0, 'color': 'black', 'shade_mod': 0} for item in self.items}
-        self.history = []
         # Speed 1 (slow) to 10 (fast). 
         # Base delay: 2.0s / speed
         self.delay = 2.0 / max(1, speed)
+        # Initialize stop signal
         self.stop_signal = stop_signal if stop_signal is not None else [False]
 
+
     def check_stop(self):
+        """
+        Check if the stop signal has been triggered.
+
+        Returns:
+            bool: True if stop signal is triggered, False otherwise.
+        """
+
         return self.stop_signal[0]
 
+
     def get_color(self, depth, shade_mod=0):
+        """
+        
+        
+        """
         # Rainbow palette based on depth
         colors = [
             (0, 0, 0),       # Black (Initial)
