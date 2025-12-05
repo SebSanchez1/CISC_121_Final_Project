@@ -585,18 +585,27 @@ with gr.Blocks() as merge_sort_visualizer:
     
     # Sidebar for inputs
     with gr.Sidebar():
-        characters = gr.Textbox(label = "Characters", lines=4)
-        random_amount = gr.Slider(1, 20, step=1, label = "Amount of Random Characters")
+        instructions = gr.Textbox(label = "Instructions", 
+                                  value = "This program is designed to animate the process of a Merge Sort. " \
+                                  "To start simply generate random characters or enter your own. " \
+                                  "Max 20 characters with a space between each. " \
+                                  "Numbers: 2 digits, Letters: 1 letter. " \
+                                  "Once ready to sort, adjust speed and click sort. " \
+                                  "You can also stop and reset.",
+                                  interactive = False,
+                                  lines = 2)
+        characters = gr.Textbox(label = "Characters", lines = 4)
+        random_amount = gr.Slider(1, 20, step = 1, label = "Amount of Random Characters")
         chracter_type = gr.Radio(choices = ["Numbers", "Letters", "Both"], label = "Type of Characters", value = "Numbers")
-        random_btn = gr.Button("Generate Random Characters", variant="primary")
-        speed_slider = gr.Slider(1, 10, value=5, step=1, label="Animation Speed (1=Slow, 10=Fast)")
+        random_btn = gr.Button("Generate Random Characters", variant = "primary")
+        speed_slider = gr.Slider(1, 10, value = 5, step = 1, label = "Animation Speed (1=Slow, 10=Fast)")
 
     # Main display area
     sorted_list = gr.HTML(label = "Sorted List")
 
     # Sorting control buttons
-    sort_btn = gr.Button("Sort", variant="primary")
-    reset_btn = gr.Button("Reset / Stop", variant="secondary")
+    sort_btn = gr.Button("Sort", variant = "primary")
+    reset_btn = gr.Button("Reset / Stop", variant = "secondary")
 
     # Create ramdom characters
     random_btn.click(fn = random_characters, inputs = (random_amount, chracter_type), outputs = characters, api_name = "Generate Random Characters")
