@@ -7,6 +7,7 @@
 ![FullAnimation_5_6](README_pics/Full_Animation_5_6.png)
 ![FullAnimation_7](README_pics/Full_Animation_7.png)
 ![InputConstraints](README_pics/Input_Constraints.gif)
+![SpammingButtons](README_pics/Spamming_Buttons.gif)
 ## Problem Breakdown & Computational Thinking (You can add a flowchart and write the four pillars of computational thinking briefly in bullets)
 ![Flowchart](README_pics/Final_Project_Flowchart.jpg)
 ## Steps to Run
