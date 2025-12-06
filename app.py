@@ -12,7 +12,7 @@ valid_characters = [
     'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
 ]
 
-class SortVisualizer: # [Used ChatGPT for most of animation: Used prompt "create animation for merge sort"]
+class SortVisualizer: # [Antigravity used for most of animation: Used prompt "create animation for merge sort"]
     """
     Handles elements for the merge sort visualization
 
@@ -108,7 +108,7 @@ class SortVisualizer: # [Used ChatGPT for most of animation: Used prompt "create
         return f"rgb({r}, {g}, {b})"
 
 
-    def render(self): # [ChatGPT used for most of HTML/CSS styling]
+    def render(self): # [Antigravity used for most of HTML/CSS styling]
         """
         Uses HTML/CSS to render the current state of the items.
 
@@ -218,7 +218,7 @@ class SortVisualizer: # [Used ChatGPT for most of animation: Used prompt "create
                 del self.state[item_id]['force_color']
 
 
-    def merge_sort(self, start, end, depth): # [ChatGPT used for time delays to create smooth animation and to imbed animation into the merge sort]
+    def merge_sort(self, start, end, depth): # [Antigravity used for time delays to create smooth animation and to imbed animation into the merge sort]
         """
         Main merge sort algorithm with animation steps happening simultaneously.
 
@@ -521,7 +521,7 @@ def update_button_text(choice):
         return gr.Button("Generate Random Characters")
 
 
-def sanitize_input(text): # [Used ChatGPT for re library]
+def sanitize_input(text): # [Antigravity used for re library]
     """
     Sanitizes user input to enforce constraints:
         - Only alphanumeric characters and spaces allowed.
