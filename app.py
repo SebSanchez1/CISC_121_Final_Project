@@ -586,7 +586,7 @@ with gr.Blocks() as merge_sort_visualizer:
     # Sidebar for inputs
     with gr.Sidebar():
         instructions = gr.Textbox(label = "Instructions", 
-                                  value = "This program is designed to animate the process of a Merge Sort. " \
+                                  value = "Merge Sort Animation. " \
                                   "To start simply generate random characters or enter your own. " \
                                   "Max 20 characters with a space between each. " \
                                   "Numbers: 2 digits, Letters: 1 letter. " \
