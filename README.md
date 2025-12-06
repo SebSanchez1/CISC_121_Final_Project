@@ -46,6 +46,6 @@
 #### 3. Click sort button to begin animation.
 #### 4. Wait for the list to finish sorting or use reset button to begin again.
 # Hugging Face Link
-[Go To Hugging Face Space]([https://example.com](https://huggingface.co/spaces/SebSanchez1/CISC_121_Final_Project_Space))
+[Go To Hugging Face Space](https://example.com](https://huggingface.co/spaces/SebSanchez1/CISC_121_Final_Project_Space)
 # Author & Acknowledgment
 #### Created by Sebastian Sanchez. Used Gradio website for basic syntax to create base program. Used Antigravity for majority of the complex animation process to imbed animation while the sort happens.
