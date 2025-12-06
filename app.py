@@ -218,7 +218,7 @@ class SortVisualizer: # [Used ChatGPT for most of animation: Used prompt "create
                 del self.state[item_id]['force_color']
 
 
-    def merge_sort(self, start, end, depth): # [ChatGPT used for time delays to create smooth animation]
+    def merge_sort(self, start, end, depth): # [ChatGPT used for time delays to create smooth animation and to imbed animation into the merge sort]
         """
         Main merge sort algorithm with animation steps happening simultaneously.
 
@@ -245,7 +245,7 @@ class SortVisualizer: # [Used ChatGPT for most of animation: Used prompt "create
         yield from self.merge_sort(start, mid, depth + 1)
         if self.check_stop(): return
         
-        # Update right recursion depth (Lighter)
+        # Update right recursion depth (Darker)
         self.update_depths(range(mid, end), depth + 1, shade_delta=-1)
         yield self.render()
         if self.check_stop(): return
